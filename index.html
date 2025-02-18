@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>💵股神📈</title>
+	<style>
+		#shopModal { z-index: 1000; }
+		#tradeModal { z-index: 1001; }
+		.max-button {
+			background: #f1c40f !important;
+			padding: 10px 15px !important;
+			margin-left: 5px;
+		}
+		.input-group {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			margin: 10px 0;
+		}
+
+		:root {
+			--rise-color: #e74c3c;
+			--fall-color: #2ecc71;
+			--primary-color: #3498db;
+			--background: #ecf0f1;
+			--redeem-color: #9b59b6;
+			--sell-color: #e67e22;
+		}
+
+		body {
+			margin: 0;
+			padding: 10px;
+			background: var(--background);
+		}
+
+		.container {
+			max-width: 500px;
+			margin: 0 auto;
+		}
+
+		.card {
+			background: white;
+			border-radius: 10px;
+			padding: 15px;
+			margin-bottom: 10px;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+		}
+
+		.stock-item, .shop-item {
+			position: relative;
+			padding: 15px;
+			margin: 8px 0;
+			background: white;
+			border-radius: 8px;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+		}
+
+		.trend-icon {
+			font-size: 1.2em;
+			position: absolute;
+			right: 15px;
+			top: 15px;
+		}
+
+		.button {
+			padding: 10px 15px;
+			border: none;
+			border-radius: 20px;
+			background: var(--primary-color);
+			color: white;
+			cursor: pointer;
+			margin: 5px;
+		}
+
+		.modal {
+			position: fixed;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background: rgba(0,0,0,0.5);
+			display: none;
+			justify-content: center;
+			align-items: center;
+			z-index: 1000;
+		}
+
+		.modal-content {
+			background: white;
+			padding: 20px;
+			border-radius: 10px;
+			width: 90%;
+			max-width: 400px;
+		}
+
+		.income-badge {
+			background: #27ae60;
+			color: white;
+			padding: 2px 8px;
+			border-radius: 10px;
+			font-size: 0.9em;
+		}
+	</style>
+</head>
+<body>
+	<!-- 登录界面 -->
+	<div id="loginView" class="container">
+		<div class="card">
+			<h2>💵股神📈</h2>
+			<input type="text" id="username" placeholder="用户名" style="width:100%; padding:10px; margin:5px 0;">
+			<input type="password" id="password" placeholder="密码" style="width:100%; padding:10px; margin:5px 0;">
+			<button class="button" onclick="login()">登录</button>
+			<button class="button" onclick="register()">注册</button>
+		</div>
+	</div>
+
+	<!-- 主界面 -->
+	<div id="mainView" class="container" style="display:none;">
+		<div class="card">
+			<h2>我的资产 💰</h2>
+			<div id="userBalance">余额：$10000.00</div>
+			<div id="totalStockValue" style="margin:5px 0; color:#e67e22;"></div>
+			<div style="margin-top:10px;">
+				<button class="button" onclick="showRedeem()">兑换码 🎁</button>
+				<button class="button" onclick="showShop()">商城 🏪</button>
+				<button class="button" onclick="showHistory()">记录 📜</button>
+			</div>
+			<div id="portfolioList"></div>
+		</div>
+
+		<div class="card">
+			<h2>股票市场 📊</h2>
+			<div id="stockList"></div>
+		</div>
+	</div>
+
+	<!-- 交易弹窗 -->
+	<div id="tradeModal" class="modal">
+		<div class="modal-content">
+			<h3 id="tradeTitle"></h3>
+			<p id="stockPrice"></p>
+			<p id="availableBalance" style="color:#666; font-size:0.9em;"></p>
+			<div class="input-group">
+				<input type="number" id="tradeAmount" min="1" value="1" 
+					   style="flex:1; padding:10px;">
+				<button class="button max-button" onclick="setMaxAmount()">Max</button>
+			</div>
+			<div>
+				<button class="button" onclick="confirmTrade()">确认</button>
+				<button class="button" onclick="closeModal()">取消</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- 交易历史弹窗 -->
+	<div id="historyModal" class="modal">
+		<div class="modal-content">
+			<h3>交易记录 📜</h3>
+			<div id="historyList" style="max-height:400px; overflow-y:auto;"></div>
+			<button class="button" onclick="closeHistory()" style="margin-top:10px;">关闭</button>
+		</div>
+	</div>
+
+	<!-- 商城弹窗 -->
+	<div id="shopModal" class="modal">
+		<div class="modal-content">
+			<h3>资产商城 🏬</h3>
+			<div id="shopItemsList" style="max-height:60vh; overflow-y:auto;"></div>
+			<button class="button" onclick="closeShop()" style="margin-top:10px;">关闭</button>
+		</div>
+	</div>
+
+	<!-- 兑换码弹窗 -->
+	<div id="redeemModal" class="modal">
+		<div class="modal-content">
+			<h3>兑换奖励码 🎫</h3>
+			<input type="text" id="redeemCode" 
+				   placeholder="输入兑换码"
+				   style="width:100%; padding:10px; margin:10px 0;">
+			<div>
+				<button class="button" onclick="redeemCode()">兑换</button>
+				<button class="button" onclick="closeRedeem()">关闭</button>
+			</div>
+		</div>
+	</div>
+
+	<script>
+	// 股票数据初始化
+	let stocks = [
+		{ name: "陶氏科技💾", price: 15000, capital: 1.5e11, trend: 0 },
+		{ name: "生物医药🧪", price: 680, capital: 6.8e8, trend: 0 },
+		{ name: "陶氏新能源🔋", price: 1500, capital: 1.5e10, trend: 0 },
+		{ name: "陶氏金融🏦", price: 8000, capital: 8e10, trend: 1 },
+		{ name: "媒体网络🛜", price: 60, capital: 6e8, trend: 0 },
+		{ name: "陶氏地产🏡", price: 100000, capital: 1e12, trend: 0 },
+		{ name: "陶氏时尚👗", price: 8, capital: 8e7, trend: 0 },
+		{ name: "旅游天地🏕️", price: 110, capital: 1.1e9, trend: 0 },
+		{ name: "食品国际🍱", price: 45, capital: 4.5e8, trend: 0 },
+		{ name: "陶氏医药🧬", price: 5000, capital: 5e10, trend: 0 }
+	];
+
+	// 商城商品数据
+	const shopItems = [
+		{ name: '普通汽车公司', price: 10000, income: 1, emoji: '🚗', desc: '基础代步工具' },
+		{ name: '中等汽车公司', price: 200000, income: 25, emoji: '🚙', desc: '舒适出行体验' },
+		{ name: '高级汽车公司', price: 3000000, income: 650, emoji: '🚎', desc: '身份的象征' },
+		{ name: '陶氏豪华汽车公司', price: 30000000, income: 7000, emoji: '🏎️', desc: '陶氏贵族的象征' },
+		{ name: 'Tsao奶茶店', price: 300000, income: 40, emoji: '🧋', desc: '奶茶连锁品牌' },
+		{ name: '98K汉堡店', price: 500000, income: 80, emoji: '🍔', desc: '汉堡连锁品牌' },
+		{ name: '中国川菜店', price: 1000000, income: 200, emoji: '🥘', desc: '川菜连锁品牌' },
+		{ name: '陶氏6星米其林餐饮公司', price: 100000000, income: 30000, emoji: '🍷🍴', desc: '陶氏连锁品牌' },
+		{ name: '普通房地产公司', price: 600000, income: 100, emoji: '🏚️', desc: '普通住宅' },
+		{ name: '中等房地产公司', price: 2000000, income: 450, emoji: '🏠', desc: '温馨住宅' },
+		{ name: '高级房地产公司', price: 5000000, income: 1200, emoji: '🏠', desc: '豪华居住体验' },
+		{ name: '陶氏大别墅地产公司', price: 60000000, income: 15000, emoji: '🏡', desc: '陶氏贵族大别墅' }
+	];
+
+	// 用户系统
+	let currentUser = null;
+	let currentUsername = null;
+	let currentTrade = null;
+	let currentSellItem = null;
+
+	// 兑换码数据
+	const rewardCodes = {
+		"WELCOME": { amount: 10000 },
+		"MILLIONAIRE": { amount: 1000000 },
+		"DANIELTAO": { amount: 10000000 },
+		"RICH2025": { amount: 20250 },
+		"TAOSTOCK": { amount: 100000 }
+	};
+
+	function getUsers() {
+		return JSON.parse(localStorage.getItem('users')) || {};
+	}
+
+	function saveUsers(users) {
+		localStorage.setItem('users', JSON.stringify(users));
+	}
+
+	function saveUser() {
+		const users = getUsers();
+		users[currentUsername] = currentUser;
+		saveUsers(users);
+	}
+
+	function loadUser(username) {
+		const users = getUsers();
+		return users[username] ? {
+			password: users[username].password,
+			balance: users[username].balance,
+			portfolio: users[username].portfolio || {},
+			properties: users[username].properties || {},
+			history: users[username].history || [],
+			redeemedCodes: users[username].redeemedCodes || []
+		} : null;
+	}
+
+	// 注册功能
+	function register() {
+		const username = document.getElementById('username').value.trim();
+		const password = document.getElementById('password').value.trim();
+		
+		if (!username || !password) {
+			alert('用户名和密码不能为空！');
+			return;
+		}
+		
+		const users = getUsers();
+		if (users.hasOwnProperty(username)) {
+			alert('用户名已存在！');
+			return;
+		}
+		
+		currentUser = {
+			password: password,
+			balance: 10000,
+			portfolio: {},
+			properties: {},
+			history: [],
+			redeemedCodes: []
+		};
+		
+		currentUsername = username;
+		saveUser();
+		alert('注册成功！自动登录');
+		login();
+	}
+
+	// 登录功能
+	function login() {
+		const username = document.getElementById('username').value.trim();
+		const password = document.getElementById('password').value.trim();
+		
+		const users = getUsers();
+		if (!users[username]) {
+			alert('用户不存在！');
+			return;
+		}
+		
+		if (users[username].password !== password) {
+			alert('密码错误！');
+			return;
+		}
+		
+		currentUsername = username;
+		currentUser = loadUser(username);
+		
+		document.getElementById('loginView').style.display = 'none';
+		document.getElementById('mainView').style.display = 'block';
+		updateDisplay();
+		setInterval(updateStockPrices, 1000);
+		startIncomeTimer();
+	}
+
+	// 股票价格更新
+	function updateStockPrices() {
+		stocks.forEach(stock => {
+			const previousPrice = stock.price;
+			stock.price = stock.price * (0.95 + Math.random() * 0.1);
+			stock.price = Math.round(stock.price * 100) / 100;
+			stock.trend = stock.price > previousPrice ? 1 : -1;
+			stock.capital = stock.capital * (0.98 + Math.random() * 0.04);
+			stock.capital = Math.round(stock.capital);
+		});
+		renderStocks();
+		renderPortfolio();
+	}
+
+	// 股票界面渲染
+	function renderStocks() {
+		const container = document.getElementById('stockList');
+		container.innerHTML = stocks.map(stock => `
+			<div class="stock-item">
+				<div class="trend-icon">
+					${stock.trend > 0 ? '📈' : '📉'}
+					<span style="color:${stock.trend > 0 ? 'var(--rise-color)' : 'var(--fall-color)'}">
+						$${stock.price.toFixed(2)}
+					</span>
+				</div>
+				<h3>${stock.name}</h3>
+				<div>市值：$${stock.capital.toLocaleString()}</div>
+				<div style="margin-top:10px;">
+					<button class="button" onclick="showTrade('${stock.name}', 'buy')">买入</button>
+					<button class="button" onclick="showTrade('${stock.name}', 'sell')">卖出</button>
+				</div>
+			</div>
+		`).join('');
+	}
+
+	// 资产显示（含股票总资产）
+	function renderPortfolio() {
+		const container = document.getElementById('portfolioList');
+		let totalStockValue = 0;
+
+		const stockContent = Object.keys(currentUser.portfolio).map(stockName => {
+			const shares = currentUser.portfolio[stockName];
+			const stock = stocks.find(s => s.name === stockName);
+			const value = shares * stock.price;
+			totalStockValue += value;
+			return `
+				<div class="card" style="margin:5px 0; padding:10px;">
+					<div>${stockName}：持有 ${shares} 股</div>
+					<div>当前价值：$${value.toFixed(2)}</div>
+				</div>
+			`;
+		}).join('');
+
+		document.getElementById('totalStockValue').textContent = 
+			`股票总资产：$${totalStockValue.toFixed(2)}`;
+
+		const propertyContent = `
+			<div class="card" style="margin:10px 0; background:#f9f9f9;">
+				<h3>被动收入 💸</h3>
+				${Object.keys(currentUser.properties).map(itemName => {
+					const item = shopItems.find(i => i.name === itemName);
+					return `
+						<div style="padding:5px 0;">
+							${item.emoji} ${itemName} x${currentUser.properties[itemName]} 
+							($${item.income * currentUser.properties[itemName]}/秒)
+						</div>
+					`;
+				}).join('') || "<div>暂无资产</div>"}
+			</div>
+		`;
+
+		container.innerHTML = (stockContent || "<div>暂无股票持仓</div>") + propertyContent;
+	}
+
+	// 交易功能
+	function showTrade(stockName, type) {
+		currentTrade = { stock: stockName, type };
+		currentSellItem = null;
+		const stock = stocks.find(s => s.name === stockName);
+		document.getElementById('tradeTitle').textContent = `${type === 'buy' ? '买入' : '卖出'} ${stockName}`;
+		document.getElementById('stockPrice').textContent = `当前价格：$${stock.price.toFixed(2)}`;
+		
+		if (type === 'buy') {
+			document.getElementById('availableBalance').textContent = `可用现金：$${currentUser.balance.toFixed(2)}`;
+		} else {
+			const held = currentUser.portfolio[stockName] || 0;
+			document.getElementById('availableBalance').textContent = `可用持仓：${held} 股`;
+		}
+		
+		document.getElementById('tradeModal').style.display = 'flex';
+		document.getElementById('tradeAmount').value = 1;
+	}
+
+	// Max按钮功能
+	function setMaxAmount() {
+		if (currentTrade) {
+			if (currentTrade.type === 'buy') {
+				const stock = stocks.find(s => s.name === currentTrade.stock);
+				const maxShares = Math.floor(currentUser.balance / stock.price);
+				document.getElementById('tradeAmount').value = maxShares > 0 ? maxShares : 1;
+			} else if (currentTrade.type === 'sell') {
+				const held = currentUser.portfolio[currentTrade.stock] || 0;
+				document.getElementById('tradeAmount').value = held;
+			}
+		} else if (currentSellItem) {
+			const held = currentUser.properties[currentSellItem] || 0;
+			document.getElementById('tradeAmount').value = held;
+		}
+	}
+
+	// 资产出售功能
+	function showSell(itemName) {
+		currentSellItem = itemName;
+		currentTrade = null;
+		const item = shopItems.find(i => i.name === itemName);
+		document.getElementById('tradeTitle').textContent = `出售 ${itemName}`;
+		document.getElementById('stockPrice').textContent = `出售价格：$${(item.price * 0.9).toFixed(2)}（原价90%）`;
+		const held = currentUser.properties[itemName] || 0;
+		document.getElementById('availableBalance').textContent = `可用数量：${held}`;
+		document.getElementById('tradeModal').style.display = 'flex';
+		document.getElementById('tradeAmount').value = 1;
+	}
+
+	function confirmTrade() {
+		if (currentTrade) {
+			const stock = stocks.find(s => s.name === currentTrade.stock);
+			const amount = parseInt(document.getElementById('tradeAmount').value);
+			
+			if (currentTrade.type === 'buy') {
+				const cost = amount * stock.price;
+				if (cost > currentUser.balance) {
+					alert('资金不足！');
+					return;
+				}
+				currentUser.balance -= cost;
+				currentUser.portfolio[stock.name] = (currentUser.portfolio[stock.name] || 0) + amount;
+			} else {
+				if (!currentUser.portfolio[stock.name] || currentUser.portfolio[stock.name] < amount) {
+					alert('持仓不足！');
+					return;
+				}
+				currentUser.balance += amount * stock.price;
+				currentUser.portfolio[stock.name] -= amount;
+				if (currentUser.portfolio[stock.name] === 0) {
+					delete currentUser.portfolio[stock.name];
+				}
+			}
+
+			currentUser.history.push({
+				type: currentTrade.type,
+				stock: stock.name,
+				amount,
+				price: stock.price,
+				time: new Date().toLocaleString()
+			});
+		} else if (currentSellItem) {
+			const item = shopItems.find(i => i.name === currentSellItem);
+			const amount = parseInt(document.getElementById('tradeAmount').value);
+			const owned = currentUser.properties[currentSellItem] || 0;
+
+			if (amount < 1) {
+				alert('出售数量至少为1！');
+				return;
+			}
+			
+			if (owned < amount) {
+				alert('持有数量不足！');
+				return;
+			}
+
+			const sellValue = Math.floor(item.price * 0.9 * amount);
+			currentUser.balance += sellValue;
+			currentUser.properties[currentSellItem] -= amount;
+			
+			if (currentUser.properties[currentSellItem] === 0) {
+				delete currentUser.properties[currentSellItem];
+			}
+
+			currentUser.history.push({
+				type: 'sell',
+				item: currentSellItem,
+				amount: amount,
+				price: item.price * 0.9,
+				time: new Date().toLocaleString()
+			});
+		}
+
+		saveUser();
+		updateDisplay();
+		closeModal();
+		if (currentSellItem) showShop();
+	}
+
+	// 商城系统
+	function showShop() {
+		const container = document.getElementById('shopItemsList');
+		container.innerHTML = shopItems.map(item => {
+			const owned = currentUser.properties[item.name] || 0;
+			return `
+				<div class="shop-item">
+					<div style="display:flex; justify-content:space-between;">
+						<div>
+							<h3>${item.emoji} ${item.name}</h3>
+							<div style="color:#666; font-size:0.9em;">${item.desc}</div>
+						</div>
+						<div style="text-align:right;">
+							<div>$${item.price.toLocaleString()}</div>
+							<div class="income-badge">+$${item.income}/秒</div>
+						</div>
+					</div>
+					<div style="margin-top:10px;">
+						${owned > 0 ? `
+						<button class="button" 
+								onclick="showSell('${item.name}')"
+								style="background:var(--sell-color);">
+							出售
+						</button>` : ''}
+						<button class="button" 
+								onclick="buyItem('${item.name}')"
+								style="background:#2ecc71;">
+							购买
+						</button>
+						<span>已持有：${owned}</span>
+					</div>
+				</div>
+			`;
+		}).join('');
+		document.getElementById('shopModal').style.display = 'flex';
+	}
+
+	function buyItem(itemName) {
+		const item = shopItems.find(i => i.name === itemName);
+		
+		if (currentUser.balance < item.price) {
+			alert('资金不足！');
+			return;
+		}
+
+		if (confirm(`确认花费 $${item.price.toLocaleString()} 购买 ${itemName} 吗？`)) {
+			currentUser.balance -= item.price;
+			currentUser.properties[itemName] = (currentUser.properties[itemName] || 0) + 1;
+			
+			currentUser.history.push({
+				type: 'buy',
+				item: itemName,
+				price: item.price,
+				time: new Date().toLocaleString()
+			});
+
+			saveUser();
+			updateDisplay();
+			showShop();
+		}
+	}
+
+	// 被动收入系统
+	function startIncomeTimer() {
+		setInterval(() => {
+			let totalIncome = 0;
+			Object.keys(currentUser.properties).forEach(itemName => {
+				const item = shopItems.find(i => i.name === itemName);
+				totalIncome += item.income * currentUser.properties[itemName];
+			});
+			currentUser.balance += totalIncome;
+			saveUser();
+			updateDisplay();
+		}, 1000);
+	}
+
+	// 兑换码系统
+	function showRedeem() {
+		document.getElementById('redeemModal').style.display = 'flex';
+		document.getElementById('redeemCode').value = '';
+	}
+
+	function closeRedeem() {
+		document.getElementById('redeemModal').style.display = 'none';
+	}
+
+	function redeemCode() {
+		const code = document.getElementById('redeemCode').value.trim().toUpperCase();
+		
+		if (!code) {
+			alert('请输入兑换码！');
+			return;
+		}
+		
+		if (currentUser.redeemedCodes.includes(code)) {
+			alert('该兑换码已使用过！');
+			return;
+		}
+		
+		const reward = rewardCodes[code];
+		
+		if (!reward) {
+			alert('无效的兑换码！');
+			return;
+		}
+		
+		currentUser.balance += reward.amount;
+		currentUser.redeemedCodes.push(code);
+		
+		currentUser.history.push({
+			type: 'redeem',
+			code: code,
+			amount: reward.amount,
+			time: new Date().toLocaleString()
+		});
+		
+		saveUser();
+		updateDisplay();
+		alert(`成功兑换 $${reward.amount}！`);
+		closeRedeem();
+	}
+
+	// 交易记录显示
+	function showHistory() {
+		const container = document.getElementById('historyList');
+		container.innerHTML = currentUser.history.map(record => {
+			let content = '';
+			if (record.type === 'redeem') {
+				content = `
+					<div style="color:var(--redeem-color);">
+						🎫 兑换码：${record.code}
+					</div>
+					<div>获得金额：+$${record.amount.toFixed(2)}</div>
+				`;
+			} else if (record.item) {
+				if (record.type === 'buy') {
+					content = `
+						<div style="color:var(--rise-color);">
+							🏪 购买 ${record.item}
+						</div>
+						<div>花费：$${record.price.toFixed(2)}</div>
+					`;
+				} else {
+					content = `
+						<div style="color:var(--sell-color);">
+							🏪 出售 ${record.item}
+						</div>
+						<div>数量：${record.amount}</div>
+						<div>单价：$${record.price.toFixed(2)}</div>
+						<div>获得金额：+$${(record.amount * record.price).toFixed(2)}</div>
+					`;
+				}
+			} else {
+				content = `
+					<div style="color:${record.type === 'buy' ? 'var(--rise-color)' : 'var(--fall-color)'}">
+						${record.type === 'buy' ? '📈 买入' : '📉 卖出'} ${record.stock}
+					</div>
+					<div>数量：${record.amount} 股</div>
+					<div>单价：$${record.price.toFixed(2)}</div>
+					<div>总金额：$${(record.amount * record.price).toFixed(2)}</div>
+				`;
+			}
+			return `
+				<div class="card" style="margin:5px 0; padding:10px; 
+					background:${getRecordBackground(record)}">
+					${content}
+					<div style="font-size:0.8em; color:#666;">${record.time}</div>
+				</div>
+			`;
+		}).reverse().join('') || "<div>暂无记录</div>";
+		document.getElementById('historyModal').style.display = 'flex';
+	}
+
+	function getRecordBackground(record) {
+		if (record.type === 'redeem') return '#f5e8ff';
+		if (record.type === 'buy') return record.item ? '#f8e5e5' : '#fee';
+		if (record.type === 'sell') return '#fdebd0';
+		return '#e5f8f0';
+	}
+
+	// 通用功能
+	function closeModal() {
+		document.getElementById('tradeModal').style.display = 'none';
+		currentTrade = null;
+		currentSellItem = null;
+	}
+
+	function closeShop() {
+		document.getElementById('shopModal').style.display = 'none';
+	}
+
+	function closeHistory() {
+		document.getElementById('historyModal').style.display = 'none';
+	}
+
+	function updateDisplay() {
+		document.getElementById('userBalance').textContent = 
+			`余额：$${currentUser.balance.toFixed(2)}`;
+		renderPortfolio();
+	}
+
+	// 初始化
+	document.getElementById('loginView').style.display = 'block';
+	document.getElementById('mainView').style.display = 'none';
+	</script>
+</body>
+</html>
